@@ -5,88 +5,92 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ASUS Market Pulse</title>
     
-    <!-- 1. Global Error Handler: Prevents the "White Screen of Death" by showing errors -->
-    <script>
-      window.onerror = function(message, source, lineno, colno, error) {
-        document.body.innerHTML = `
-          <div style="padding: 20px; color: #7f1d1d; background: #fef2f2; font-family: sans-serif;">
-            <h2 style="margin-top:0">Startup Error</h2>
-            <p><strong>Message:</strong> ${message}</p>
-            <p><strong>Location:</strong> Line ${lineno}</p>
-            <p style="font-size: 0.8em; color: #991b1b;">Try clearing your browser cache or checking your internet connection for CDN loading issues.</p>
-          </div>
-        `;
-        console.error(error);
-      };
-    </script>
-
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Babel -->
+    <!-- 1. Load Stable Libraries (UMD) - These define window.React, window.Recharts, etc. -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/recharts@2.10.3/umd/Recharts.js"></script>
+    
+    <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
       body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-      ::-webkit-scrollbar { width: 8px; height: 8px; }
-      ::-webkit-scrollbar-track { background: #f1f1f1; }
-      ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
-      ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+      .icon { width: 18px; height: 18px; display: inline-block; vertical-align: middle; }
     </style>
 
-    <!-- Import Map -->
-    <script type="importmap">
+    <!-- 2. Load Google GenAI (ESM) and attach to window -->
+    <script type="module">
+      import { GoogleGenAI } from "https://esm.sh/@google/genai@0.1.1";
+      window.GoogleGenAI = GoogleGenAI;
+      console.log("AI SDK Loaded");
+    </script>
+<script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@18.2.0",
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-    "lucide-react": "https://esm.sh/lucide-react@0.292.0",
-    "recharts": "https://esm.sh/recharts@2.12.0?external=react,react-dom",
-    "@google/genai": "https://esm.sh/@google/genai@0.1.1",
+    "react": "https://esm.sh/react@^19.2.3",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/"
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.35.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "recharts": "https://esm.sh/recharts@^3.6.0"
   }
 }
 </script>
 </head>
 <body>
     <div id="root">
-        <div style="height: 100vh; display: flex; align-items: center; justify-content: center; color: #666;">
-            Loading Application...
+        <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #666; font-family: sans-serif;">
+            <div style="margin-bottom: 16px;">
+                 <svg class="animate-spin" style="width: 32px; height: 32px; color: #00539B;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                 </svg>
+            </div>
+            <div>Loading Market Pulse...</div>
         </div>
     </div>
 
-    <!-- MAIN APP SCRIPT (Pure JS/React - No TS syntax to avoid runtime errors) -->
-    <script type="text/babel" data-type="module" data-presets="react">
-        import React, { useState, useEffect, useMemo, useRef } from 'react';
-        import ReactDOM from 'react-dom/client';
-        import { 
-            Camera, X, Loader2, Save, ArrowLeft, CheckCircle2, 
-            ChevronRight, PlusCircle, Pencil, Trash2, LayoutDashboard,
-            Download, Plus, Calendar, ChevronDown, ChevronUp 
-        } from 'lucide-react';
-        import { 
-            BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell 
-        } from 'recharts';
-        import { GoogleGenAI } from "@google/genai";
+    <!-- 3. MAIN APP SCRIPT -->
+    <script type="text/babel">
+        // Access globals provided by UMD scripts
+        const { useState, useEffect, useMemo, useRef } = React;
+        const { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } = Recharts;
 
-        // --- 1. CONFIGURATION & TYPES ---
+        // --- ICONS (Inline SVGs to avoid loading errors) ---
+        const Icons = {
+            Camera: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></svg>,
+            X: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
+            Loader2: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>,
+            Save: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>,
+            ArrowLeft: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>,
+            CheckCircle2: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>,
+            PlusCircle: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>,
+            Pencil: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>,
+            Trash2: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>,
+            LayoutDashboard: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>,
+            Download: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>,
+            Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
+            Calendar: () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>,
+            ChevronDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>,
+            ChevronUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>,
+        };
 
-        // Mock process.env
+        // --- MOCK PROCESS ENV ---
         window.process = {
             env: {
-                API_KEY: '' // TODO: Put your API key here for the AI features to work
+                API_KEY: '' // TODO: Enter your API Key here
             }
         };
 
-        const AppView = {
-            DASHBOARD: 'DASHBOARD',
-            NEW_ENTRY: 'NEW_ENTRY'
-        };
-
+        const AppView = { DASHBOARD: 'DASHBOARD', NEW_ENTRY: 'NEW_ENTRY' };
+        
+        // Data Models
         const DEFAULT_TARGETS = [
             { id: '1', brand: 'Apple', model: 'MacBook Air 13 (M3)' },
             { id: '2', brand: 'Apple', model: 'MacBook Air 15 (M3)' },
@@ -100,13 +104,9 @@
             { id: '10', brand: 'MSI', model: 'Prestige 13 AI Evo' }
         ];
 
-        const COMMON_BRANDS = [
-            'Acer', 'HP', 'Lenovo', 'Dell', 'MSI', 'Apple', 
-            'Samsung', 'Microsoft', 'Gigabyte', 'Razer', 'LG', 'Asus'
-        ];
+        const COMMON_BRANDS = ['Acer', 'HP', 'Lenovo', 'Dell', 'MSI', 'Apple', 'Samsung', 'Microsoft', 'Gigabyte', 'Razer', 'LG', 'Asus'];
 
-        // --- 2. HELPER FUNCTIONS ---
-
+        // Helper Functions
         const getWeekLabel = (dateString) => {
             const date = new Date(dateString);
             const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -121,50 +121,32 @@
             const [yearStr, weekStr] = weekLabel.split('-W');
             const year = parseInt(yearStr);
             const week = parseInt(weekStr);
-            
             const simple = new Date(year, 0, 1 + (week - 1) * 7);
             const dayOfWeek = simple.getDay();
             const ISOweekStart = simple;
-            if (dayOfWeek <= 4) 
-                ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
-            else 
-                ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
-                
+            if (dayOfWeek <= 4) ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
+            else ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
             const end = new Date(ISOweekStart);
             end.setDate(end.getDate() + 6);
-            
             return `${ISOweekStart.toLocaleDateString(undefined, {month:'short', day:'numeric'})} - ${end.toLocaleDateString(undefined, {month:'short', day:'numeric'})}`;
         };
 
-        // --- 3. GEMINI SERVICE ---
-
+        // --- GEMINI SERVICE ---
         const extractDataFromImage = async (base64Image) => {
             const apiKey = window.process.env.API_KEY;
             if (!apiKey) throw new Error("API Key not configured");
+            
+            // Check if AI SDK loaded
+            if (!window.GoogleGenAI) throw new Error("AI SDK not loaded yet. Check internet connection.");
 
-            const ai = new GoogleGenAI({ apiKey });
+            const ai = new window.GoogleGenAI({ apiKey });
             const modelId = "gemini-2.5-flash-image";
-
-            const prompt = `
-                Analyze this image of a laptop or electronics price tag/spec sheet.
-                Extract the following information:
-                1. Brand Name (e.g., Acer, HP, Lenovo).
-                2. Model Name/Number (be precise).
-                3. Final Price/MSRP (numeric only, strip currency symbols).
-                4. Any mentions of promotions, discounts, or special specs (e.g., "Free mouse", "Student discount", "RTX 4060").
-                
-                If you cannot find a specific field, make a reasonable guess based on visible text or leave it blank/0.
-            `;
+            const prompt = `Analyze this image... Extract: 1. Brand 2. Model 3. Price (numeric) 4. Promo. Return JSON.`;
 
             try {
                 const response = await ai.models.generateContent({
                     model: modelId,
-                    contents: {
-                        parts: [
-                            { inlineData: { mimeType: "image/jpeg", data: base64Image } },
-                            { text: prompt },
-                        ],
-                    },
+                    contents: { parts: [{ inlineData: { mimeType: "image/jpeg", data: base64Image } }, { text: prompt }] },
                     config: {
                         responseMimeType: "application/json",
                         responseSchema: {
@@ -179,26 +161,22 @@
                         },
                     },
                 });
-
                 return JSON.parse(response.text);
             } catch (error) {
-                console.error("Gemini Extraction Error:", error);
+                console.error("Gemini Error:", error);
                 throw error;
             }
         };
 
-        // --- 4. COMPONENTS ---
+        // --- COMPONENTS ---
 
-        // Component: EntryForm
         const EntryForm = ({ availableTargets, onCreateTarget, onUpdateTarget, onDeleteTarget, onSave, onCancel }) => {
             const [step, setStep] = useState(1);
             const [targetFormMode, setTargetFormMode] = useState('none');
             const [editingTargetId, setEditingTargetId] = useState(null);
-            
             const [targetBrand, setTargetBrand] = useState('');
             const [targetModel, setTargetModel] = useState('');
             const [selectedTarget, setSelectedTarget] = useState(null);
-
             const [finalMSRP, setFinalMSRP] = useState('');
             const [promotion, setPromotion] = useState('');
             const [imagePreview, setImagePreview] = useState(null);
@@ -206,29 +184,13 @@
             const [error, setError] = useState(null);
             const fileInputRef = useRef(null);
 
-            const handleTargetSelect = (target) => {
-                setSelectedTarget(target);
-                setStep(2);
-            };
-
-            const startCreateTarget = () => {
-                setTargetBrand('');
-                setTargetModel('');
-                setEditingTargetId(null);
-                setTargetFormMode('create');
-            };
-
-            const startEditTarget = (target) => {
-                setTargetBrand(target.brand);
-                setTargetModel(target.model);
-                setEditingTargetId(target.id);
-                setTargetFormMode('edit');
-            };
+            const handleTargetSelect = (target) => { setSelectedTarget(target); setStep(2); };
+            const startCreateTarget = () => { setTargetBrand(''); setTargetModel(''); setEditingTargetId(null); setTargetFormMode('create'); };
+            const startEditTarget = (target) => { setTargetBrand(target.brand); setTargetModel(target.model); setEditingTargetId(target.id); setTargetFormMode('edit'); };
 
             const handleTargetFormSubmit = (e) => {
                 e.preventDefault();
                 if (!targetBrand || !targetModel) return;
-
                 if (targetFormMode === 'create') {
                     const newTarget = { id: crypto.randomUUID(), brand: targetBrand, model: targetModel };
                     onCreateTarget(newTarget);
@@ -244,7 +206,6 @@
             const handleFileChange = async (event) => {
                 const file = event.target.files?.[0];
                 if (!file) return;
-
                 const reader = new FileReader();
                 reader.onloadend = async () => {
                     const base64String = reader.result;
@@ -270,11 +231,7 @@
 
             const handleSubmit = (e) => {
                 e.preventDefault();
-                if (!selectedTarget || !finalMSRP) {
-                    setError("Please fill in price.");
-                    return;
-                }
-
+                if (!selectedTarget || !finalMSRP) { setError("Please fill in price."); return; }
                 const newEntry = {
                     id: crypto.randomUUID(),
                     date: new Date().toISOString(),
@@ -287,56 +244,41 @@
                 onSave(newEntry);
             };
 
-            // RENDER: Step 1 (Target Management)
             if (step === 1) {
                 if (targetFormMode !== 'none') {
                     return (
                         <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                             <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
-                                <button onClick={() => setTargetFormMode('none')} className="text-gray-500 hover:text-gray-700 flex items-center gap-1 text-sm font-medium">
-                                    <ArrowLeft size={16} /> Cancel
-                                </button>
+                                <button onClick={() => setTargetFormMode('none')} className="text-gray-500 hover:text-gray-700 flex items-center gap-1 text-sm font-medium"><Icons.ArrowLeft /> Cancel</button>
                                 <h2 className="text-lg font-semibold text-gray-800">{targetFormMode === 'create' ? 'Add New Model' : 'Edit Model'}</h2>
                                 <div className="w-12"></div>
                             </div>
                             <div className="p-6">
                                 <form onSubmit={handleTargetFormSubmit} className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Brand Name</label>
-                                        <input list="brands" type="text" required value={targetBrand} onChange={(e) => setTargetBrand(e.target.value)} placeholder="e.g. Razer" className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                                        <datalist id="brands">{COMMON_BRANDS.map(b => <option key={b} value={b} />)}</datalist>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Model Name / Number</label>
-                                        <input type="text" required value={targetModel} onChange={(e) => setTargetModel(e.target.value)} placeholder="e.g. Blade 14 (2024)" className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                                    </div>
+                                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Brand</label><input list="brands" type="text" required value={targetBrand} onChange={(e) => setTargetBrand(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" /><datalist id="brands">{COMMON_BRANDS.map(b => <option key={b} value={b} />)}</datalist></div>
+                                    <div><label className="block text-sm font-medium text-gray-700 mb-1">Model</label><input type="text" required value={targetModel} onChange={(e) => setTargetModel(e.target.value)} className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" /></div>
                                     <button type="submit" className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-blue-700 shadow-sm mt-4">{targetFormMode === 'create' ? 'Create & Select' : 'Save Changes'}</button>
                                 </form>
                             </div>
                         </div>
                     );
                 }
-
                 return (
                     <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                         <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
-                            <button onClick={onCancel} className="text-gray-500 hover:text-gray-700 flex items-center gap-1 text-sm font-medium"><ArrowLeft size={16} /> Back</button>
-                            <h2 className="text-lg font-semibold text-gray-800">Select Target Model</h2>
+                            <button onClick={onCancel} className="text-gray-500 hover:text-gray-700 flex items-center gap-1 text-sm font-medium"><Icons.ArrowLeft /> Back</button>
+                            <h2 className="text-lg font-semibold text-gray-800">Select Target</h2>
                             <div className="w-12"></div>
                         </div>
                         <div className="p-4">
-                            <button onClick={startCreateTarget} className="w-full flex items-center justify-center gap-2 p-3 mb-4 rounded-lg border-2 border-dashed border-blue-300 text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors font-semibold"><PlusCircle size={20} /> Create New Model</button>
-                            <p className="text-xs text-gray-500 mb-2 px-2 uppercase font-semibold tracking-wider">Existing Targets</p>
+                            <button onClick={startCreateTarget} className="w-full flex items-center justify-center gap-2 p-3 mb-4 rounded-lg border-2 border-dashed border-blue-300 text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors font-semibold"><Icons.PlusCircle /> Create New Model</button>
                             <div className="space-y-3">
                                 {availableTargets.map((target, idx) => (
                                     <div key={target.id || idx} className="w-full flex items-center p-3 rounded-lg border border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-all bg-white group shadow-sm">
-                                        <button onClick={() => handleTargetSelect(target)} className="flex-1 text-left">
-                                            <div className="font-semibold text-gray-900 group-hover:text-blue-700">{target.model}</div>
-                                            <div className="text-sm text-gray-500">{target.brand}</div>
-                                        </button>
+                                        <button onClick={() => handleTargetSelect(target)} className="flex-1 text-left"><div className="font-semibold text-gray-900 group-hover:text-blue-700">{target.model}</div><div className="text-sm text-gray-500">{target.brand}</div></button>
                                         <div className="flex items-center gap-1 border-l border-gray-200 pl-3 ml-2">
-                                            <button onClick={(e) => { e.stopPropagation(); startEditTarget(target); }} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-white rounded-md transition-colors"><Pencil size={18} /></button>
-                                            <button onClick={(e) => { e.stopPropagation(); onDeleteTarget(target.id); }} className="p-2 text-gray-400 hover:text-red-600 hover:bg-white rounded-md transition-colors"><Trash2 size={18} /></button>
+                                            <button onClick={(e) => { e.stopPropagation(); startEditTarget(target); }} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-white rounded-md transition-colors"><Icons.Pencil /></button>
+                                            <button onClick={(e) => { e.stopPropagation(); onDeleteTarget(target.id); }} className="p-2 text-gray-400 hover:text-red-600 hover:bg-white rounded-md transition-colors"><Icons.Trash2 /></button>
                                         </div>
                                     </div>
                                 ))}
@@ -346,47 +288,32 @@
                 );
             }
 
-            // RENDER: Step 2 (Price Entry)
             return (
                 <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
-                        <button onClick={() => setStep(1)} className="text-gray-500 hover:text-gray-700 flex items-center gap-1 text-sm font-medium"><ArrowLeft size={16} /> Change Model</button>
+                        <button onClick={() => setStep(1)} className="text-gray-500 hover:text-gray-700 flex items-center gap-1 text-sm font-medium"><Icons.ArrowLeft /> Change Model</button>
                         <h2 className="text-lg font-semibold text-gray-800">Update Price</h2>
                         <div className="w-12"></div>
                     </div>
                     <div className="p-6">
                         <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-6 flex items-start gap-3">
-                            <CheckCircle2 className="text-blue-600 mt-0.5" size={20} />
-                            <div>
-                                <p className="text-xs text-blue-600 font-bold uppercase tracking-wider">Target Model</p>
-                                <h3 className="text-lg font-bold text-gray-900">{selectedTarget?.model}</h3>
-                                <p className="text-sm text-gray-600">{selectedTarget?.brand}</p>
-                            </div>
+                            <Icons.CheckCircle2 className="text-blue-600 mt-0.5" />
+                            <div><p className="text-xs text-blue-600 font-bold uppercase tracking-wider">Target</p><h3 className="text-lg font-bold text-gray-900">{selectedTarget?.model}</h3></div>
                         </div>
                         <div className="mb-8">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Scan Price Tag (Optional)</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Scan Price Tag</label>
                             <div onClick={() => fileInputRef.current?.click()} className={`relative border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer transition-colors ${imagePreview ? 'border-blue-300 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'}`}>
                                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" capture="environment" onChange={handleFileChange} />
-                                {isAnalyzing ? (
-                                    <div className="text-center py-4"><Loader2 className="animate-spin h-10 w-10 text-blue-600 mx-auto mb-2" /><p className="text-blue-700 font-medium">Extracting Price...</p></div>
-                                ) : imagePreview ? (
-                                    <div className="relative w-full max-h-48 flex justify-center"><img src={imagePreview} alt="Preview" className="max-h-48 rounded-md object-contain" /><button onClick={(e) => { e.stopPropagation(); setImagePreview(null); setFinalMSRP(''); setPromotion(''); }} className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full shadow-md hover:bg-red-600"><X size={16} /></button></div>
-                                ) : (
-                                    <div className="text-center"><div className="bg-blue-100 p-3 rounded-full inline-flex mb-3 text-blue-600"><Camera size={24} /></div><p className="text-gray-900 font-medium">Tap to take photo</p></div>
-                                )}
+                                {isAnalyzing ? <div className="text-center py-4"><Icons.Loader2 className="animate-spin text-blue-600 mx-auto mb-2" /><p className="text-blue-700">Extracting...</p></div> : imagePreview ? <div className="relative w-full max-h-48 flex justify-center"><img src={imagePreview} className="max-h-48 rounded-md object-contain" /><button onClick={(e) => { e.stopPropagation(); setImagePreview(null); setFinalMSRP(''); }} className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full"><Icons.X /></button></div> : <div className="text-center"><div className="bg-blue-100 p-3 rounded-full inline-flex mb-3 text-blue-600"><Icons.Camera /></div><p className="text-gray-900 font-medium">Tap to take photo</p></div>}
                             </div>
                             {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
                         </div>
                         <form onSubmit={handleSubmit} className="space-y-5">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><label className="block text-sm font-medium text-gray-500 mb-1">Brand</label><input type="text" value={selectedTarget?.brand} readOnly className="w-full rounded-md border border-gray-200 bg-gray-100 px-3 py-2 text-gray-500 cursor-not-allowed" /></div>
-                                <div><label className="block text-sm font-medium text-gray-500 mb-1">Model</label><input type="text" value={selectedTarget?.model} readOnly className="w-full rounded-md border border-gray-200 bg-gray-100 px-3 py-2 text-gray-500 cursor-not-allowed" /></div>
-                            </div>
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Final MSRP ($) *</label><input type="number" value={finalMSRP} onChange={(e) => setFinalMSRP(e.target.value)} placeholder="0.00" className="w-full rounded-md border border-gray-300 px-3 py-2 text-lg font-medium text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" autoFocus /></div>
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Other Promotion / Notes</label><textarea value={promotion} onChange={(e) => setPromotion(e.target.value)} placeholder="e.g. Free backpack, 5% off student discount" rows={3} className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" /></div>
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Final MSRP ($)</label><input type="number" value={finalMSRP} onChange={(e) => setFinalMSRP(e.target.value)} placeholder="0.00" className="w-full rounded-md border border-gray-300 px-3 py-2 text-lg font-medium text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" autoFocus /></div>
+                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Promo / Notes</label><textarea value={promotion} onChange={(e) => setPromotion(e.target.value)} placeholder="e.g. Free backpack" rows={3} className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" /></div>
                             <div className="pt-4 flex gap-3">
                                 <button type="button" onClick={onCancel} className="flex-1 bg-white text-gray-700 border border-gray-300 px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors">Cancel</button>
-                                <button type="submit" className="flex-1 bg-blue-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-blue-700 shadow-sm flex justify-center items-center gap-2 transition-colors"><Save size={18} /> Save</button>
+                                <button type="submit" className="flex-1 bg-blue-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-blue-700 shadow-sm flex justify-center items-center gap-2 transition-colors"><Icons.Save /> Save</button>
                             </div>
                         </form>
                     </div>
@@ -394,139 +321,75 @@
             );
         };
 
-        // Component: WeekSection
         const WeekSection = ({ weekLabel, entries, isExpandedDefault, onDelete }) => {
             const [isExpanded, setIsExpanded] = useState(isExpandedDefault);
             const dateRange = getWeekRange(weekLabel);
-            
             const avgPrice = Math.round(entries.reduce((sum, e) => sum + e.finalMSRP, 0) / entries.length);
-            const brandsCount = new Set(entries.map(e => e.brand)).size;
-
             const chartData = Object.values(entries.reduce((acc, curr) => {
                 if (!acc[curr.brand]) acc[curr.brand] = { name: curr.brand, total: 0, count: 0 };
                 acc[curr.brand].total += curr.finalMSRP;
                 acc[curr.brand].count += 1;
                 return acc;
-            }, {}))
-            .map((item) => ({ name: item.name, avgPrice: Math.round(item.total / item.count) }))
-            .sort((a, b) => b.avgPrice - a.avgPrice);
+            }, {})).map(item => ({ name: item.name, avgPrice: Math.round(item.total / item.count) })).sort((a, b) => b.avgPrice - a.avgPrice);
 
             return (
                 <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-                    <div className="p-5 flex flex-col sm:flex-row sm:items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => setIsExpanded(!isExpanded)}>
+                    <div className="p-5 flex items-center justify-between cursor-pointer hover:bg-gray-50" onClick={() => setIsExpanded(!isExpanded)}>
                         <div className="flex items-center gap-4">
                             <div className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg text-sm font-bold border border-blue-100">{weekLabel}</div>
-                            <div><h3 className="font-semibold text-gray-900">{dateRange}</h3><p className="text-xs text-gray-500">{entries.length} entries reported • {brandsCount} brands</p></div>
+                            <div><h3 className="font-semibold text-gray-900">{dateRange}</h3><p className="text-xs text-gray-500">{entries.length} entries</p></div>
                         </div>
-                        <div className="flex items-center gap-4 mt-4 sm:mt-0">
-                            <div className="text-right hidden sm:block"><p className="text-xs text-gray-400 uppercase font-semibold">Weekly Avg</p><p className="font-bold text-gray-800">${avgPrice.toLocaleString()}</p></div>
-                            {isExpanded ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
+                        <div className="flex items-center gap-4">
+                            <div className="text-right hidden sm:block"><p className="text-xs text-gray-400 uppercase font-semibold">Avg</p><p className="font-bold text-gray-800">${avgPrice.toLocaleString()}</p></div>
+                            {isExpanded ? <Icons.ChevronUp /> : <Icons.ChevronDown />}
                         </div>
                     </div>
                     {isExpanded && (
                         <div className="border-t border-gray-100">
                             <div className="p-6 bg-gray-50 border-b border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-6">
                                  <div className="col-span-2 h-40">
-                                    <h4 className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Avg Price Distribution</h4>
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={chartData} layout="vertical" margin={{ left: 20 }}>
-                                            <XAxis type="number" hide />
-                                            <YAxis dataKey="name" type="category" width={80} tick={{fontSize: 11}} axisLine={false} tickLine={false} />
-                                            <Tooltip cursor={{fill: 'transparent'}} contentStyle={{borderRadius: '6px', fontSize: '12px'}} />
-                                            <Bar dataKey="avgPrice" fill="#94a3b8" barSize={16} radius={[0, 4, 4, 0]}>
-                                                 {chartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.name === 'ASUS' ? '#00539B' : '#64748b'} />)}
-                                            </Bar>
+                                            <XAxis type="number" hide /><YAxis dataKey="name" type="category" width={80} tick={{fontSize: 11}} axisLine={false} tickLine={false} /><Tooltip cursor={{fill: 'transparent'}} />
+                                            <Bar dataKey="avgPrice" fill="#94a3b8" barSize={16} radius={[0, 4, 4, 0]}>{chartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.name === 'ASUS' ? '#00539B' : '#64748b'} />)}</Bar>
                                         </BarChart>
                                     </ResponsiveContainer>
                                  </div>
-                                 <div className="flex flex-col justify-center text-sm text-gray-600">
-                                     <p className="mb-2">Top Promotion:</p>
-                                     <div className="bg-white p-3 rounded border border-gray-200 italic text-gray-800">"{entries.find(e => e.promotion && e.promotion !== 'None')?.promotion || 'No major promos'}"</div>
-                                 </div>
+                                 <div className="flex flex-col justify-center text-sm text-gray-600"><p className="mb-2">Top Promotion:</p><div className="bg-white p-3 rounded border border-gray-200 italic text-gray-800">"{entries.find(e => e.promotion && e.promotion !== 'None')?.promotion || 'No major promos'}"</div></div>
                             </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm text-gray-600">
-                                    <thead className="bg-white text-xs uppercase font-semibold text-gray-400 border-b border-gray-100">
-                                        <tr><th className="px-6 py-3 pl-8">Model</th><th className="px-6 py-3">Price</th><th className="px-6 py-3">Promo</th><th className="px-6 py-3 text-right">Action</th></tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50">
-                                        {entries.map((entry) => (
-                                        <tr key={entry.id} className="hover:bg-gray-50">
-                                            <td className="px-6 py-3 pl-8"><div className="font-medium text-gray-900">{entry.modelName}</div><div className="text-xs text-gray-500">{entry.brand}</div></td>
-                                            <td className="px-6 py-3 font-medium text-gray-900">${entry.finalMSRP.toLocaleString()}</td>
-                                            <td className="px-6 py-3 max-w-xs truncate text-gray-500">{entry.promotion}</td>
-                                            <td className="px-6 py-3 text-right"><button onClick={(e) => { e.stopPropagation(); onDelete(entry.id); }} className="text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={16} /></button></td>
-                                        </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                            <table className="w-full text-left text-sm text-gray-600">
+                                <thead className="bg-white text-xs uppercase font-semibold text-gray-400 border-b border-gray-100"><tr><th className="px-6 py-3 pl-8">Model</th><th className="px-6 py-3">Price</th><th className="px-6 py-3">Promo</th><th className="px-6 py-3 text-right">Action</th></tr></thead>
+                                <tbody className="divide-y divide-gray-50">{entries.map((entry) => (<tr key={entry.id} className="hover:bg-gray-50"><td className="px-6 py-3 pl-8"><div className="font-medium text-gray-900">{entry.modelName}</div><div className="text-xs text-gray-500">{entry.brand}</div></td><td className="px-6 py-3">${entry.finalMSRP.toLocaleString()}</td><td className="px-6 py-3 max-w-xs truncate">{entry.promotion}</td><td className="px-6 py-3 text-right"><button onClick={(e) => { e.stopPropagation(); onDelete(entry.id); }} className="text-gray-300 hover:text-red-500"><Icons.Trash2 /></button></td></tr>))}</tbody>
+                            </table>
                         </div>
                     )}
                 </div>
             );
         };
 
-        // Component: Dashboard
         const Dashboard = ({ entries, onAddClick, onDelete }) => {
             const groupedEntries = useMemo(() => {
                 const groups = {};
-                entries.forEach(entry => {
-                    const weekLabel = getWeekLabel(entry.date);
-                    if (!groups[weekLabel]) groups[weekLabel] = [];
-                    groups[weekLabel].push(entry);
-                });
+                entries.forEach(entry => { const week = getWeekLabel(entry.date); if (!groups[week]) groups[week] = []; groups[week].push(entry); });
                 return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
             }, [entries]);
 
             const handleExport = () => {
-                const headers = ['Week', 'Date', 'Brand', 'Model Name', 'Final MSRP', 'Promotion'];
-                const csvContent = [
-                    headers.join(','),
-                    ...entries.map(e => {
-                        const week = getWeekLabel(e.date);
-                        const cleanPromo = `"${e.promotion.replace(/"/g, '""')}"`;
-                        const cleanModel = `"${e.modelName.replace(/"/g, '""')}"`;
-                        return [week, new Date(e.date).toLocaleDateString(), e.brand, cleanModel, e.finalMSRP, cleanPromo].join(',');
-                    })
-                ].join('\n');
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                const url = URL.createObjectURL(blob);
-                link.setAttribute('href', url);
-                link.setAttribute('download', `asus_competitor_report_${new Date().toISOString().split('T')[0]}.csv`);
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                const csv = ['Week,Date,Brand,Model,Price,Promo', ...entries.map(e => `${getWeekLabel(e.date)},${new Date(e.date).toLocaleDateString()},${e.brand},"${e.modelName}","${e.finalMSRP}","${e.promotion}"`)].join('\n');
+                const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); link.download = 'report.csv'; link.click();
             };
 
             return (
                 <div className="space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div><h1 className="text-2xl font-bold text-gray-900">Weekly Price Report</h1><p className="text-sm text-gray-500 mt-1">Track competitor pricing trends by week</p></div>
-                        <div className="flex gap-2">
-                            <button onClick={handleExport} disabled={entries.length === 0} className="flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><Download size={18} /> Export All</button>
-                            <button onClick={onAddClick} className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-lg hover:bg-blue-700 font-medium text-sm shadow-sm transition-colors"><Plus size={18} /> Update Price</button>
-                        </div>
+                    <div className="flex justify-between items-center">
+                        <div><h1 className="text-2xl font-bold text-gray-900">Weekly Report</h1><p className="text-sm text-gray-500">Competitor Analysis</p></div>
+                        <div className="flex gap-2"><button onClick={handleExport} disabled={!entries.length} className="flex gap-2 bg-white border px-4 py-2 rounded-lg hover:bg-gray-50 disabled:opacity-50"><Icons.Download /> Export</button><button onClick={onAddClick} className="flex gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"><Icons.Plus /> Update</button></div>
                     </div>
-                    {groupedEntries.length === 0 ? (
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-                            <div className="bg-gray-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4"><Calendar className="text-gray-400" size={32} /></div>
-                            <h3 className="text-lg font-medium text-gray-900">No reports yet</h3>
-                            <p className="text-gray-500 mt-1 mb-6">Start by adding a price check for a competitor model.</p>
-                            <button onClick={onAddClick} className="bg-blue-600 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-blue-700">Start New Report</button>
-                        </div>
-                    ) : (
-                        <div className="space-y-6">
-                            {groupedEntries.map(([weekLabel, weekEntries], index) => <WeekSection key={weekLabel} weekLabel={weekLabel} entries={weekEntries} isExpandedDefault={index === 0} onDelete={onDelete} />)}
-                        </div>
-                    )}
+                    {!groupedEntries.length ? <div className="text-center p-12 bg-white rounded-xl border border-gray-200"><div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"><Icons.Calendar /></div><h3 className="text-gray-900 font-medium">No reports</h3><button onClick={onAddClick} className="mt-4 text-blue-600 font-medium">Add first entry</button></div> : <div className="space-y-6">{groupedEntries.map(([week, weekEntries], i) => <WeekSection key={week} weekLabel={week} entries={weekEntries} isExpandedDefault={i === 0} onDelete={onDelete} />)}</div>}
                 </div>
             );
         };
 
-        // Component: App
         const App = () => {
             const [view, setView] = useState(AppView.DASHBOARD);
             const [entries, setEntries] = useState([]);
@@ -534,55 +397,26 @@
             const [apiKeyMissing, setApiKeyMissing] = useState(false);
 
             useEffect(() => {
-                const savedEntries = localStorage.getItem('asus_competitor_data');
-                if (savedEntries) try { setEntries(JSON.parse(savedEntries)); } catch (e) { console.error(e); }
-                
-                const savedTargets = localStorage.getItem('asus_competitor_targets');
-                if (savedTargets) try { setTargets(JSON.parse(savedTargets)); } catch (e) { console.error(e); }
-
+                const savedE = localStorage.getItem('asus_data'); if(savedE) try{setEntries(JSON.parse(savedE))}catch(e){}
+                const savedT = localStorage.getItem('asus_targets'); if(savedT) try{setTargets(JSON.parse(savedT))}catch(e){}
                 if (!window.process.env.API_KEY) setApiKeyMissing(true);
             }, []);
 
-            useEffect(() => { localStorage.setItem('asus_competitor_data', JSON.stringify(entries)); }, [entries]);
-            useEffect(() => { localStorage.setItem('asus_competitor_targets', JSON.stringify(targets)); }, [targets]);
-
-            const handleSaveEntry = (entry) => { setEntries(prev => [entry, ...prev]); setView(AppView.DASHBOARD); };
-            const handleCreateTarget = (newTarget) => { setTargets(prev => [newTarget, ...prev]); };
-            const handleUpdateTarget = (updatedTarget) => { setTargets(prev => prev.map(t => t.id === updatedTarget.id ? updatedTarget : t)); };
-            const handleDeleteTarget = (id) => { if (window.confirm("Delete this model?")) setTargets(prev => prev.filter(t => t.id !== id)); };
-            const handleDeleteEntry = (id) => { if (window.confirm("Delete this entry?")) setEntries(prev => prev.filter(e => e.id !== id)); };
+            useEffect(() => { localStorage.setItem('asus_data', JSON.stringify(entries)); }, [entries]);
+            useEffect(() => { localStorage.setItem('asus_targets', JSON.stringify(targets)); }, [targets]);
 
             return (
-                <div className="min-h-screen flex flex-col font-sans text-gray-900 bg-slate-50">
-                    <header className="bg-[#00539B] text-white shadow-lg sticky top-0 z-50">
-                        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-                            <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView(AppView.DASHBOARD)}>
-                                <div className="bg-white p-1.5 rounded-lg"><LayoutDashboard className="text-[#00539B]" size={20} /></div>
-                                <div><h1 className="font-bold text-lg tracking-tight leading-tight">Market Pulse</h1><p className="text-[10px] text-blue-200 uppercase tracking-widest font-semibold">Promoter Tool</p></div>
-                            </div>
-                            <div className="text-xs text-blue-100 hidden sm:block">Internal Use Only</div>
-                        </div>
-                    </header>
-                    <main className="flex-1 w-full max-w-5xl mx-auto p-4 sm:p-6">
-                        {apiKeyMissing && (
-                            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-r-lg shadow-sm">
-                                <div className="flex"><div className="flex-shrink-0"><svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg></div><div className="ml-3"><p className="text-sm text-yellow-700"><strong className="font-medium">Demo Mode:</strong> No API Key. AI features disabled.</p></div></div>
-                            </div>
-                        )}
-                        {view === AppView.DASHBOARD ? (
-                            <Dashboard entries={entries} onAddClick={() => setView(AppView.NEW_ENTRY)} onDelete={handleDeleteEntry} />
-                        ) : (
-                            <EntryForm availableTargets={targets} onCreateTarget={handleCreateTarget} onUpdateTarget={handleUpdateTarget} onDeleteTarget={handleDeleteTarget} onSave={handleSaveEntry} onCancel={() => setView(AppView.DASHBOARD)} />
-                        )}
+                <div className="min-h-screen flex flex-col bg-slate-50 text-gray-900">
+                    <header className="bg-[#00539B] text-white shadow sticky top-0 z-50"><div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between"><div onClick={() => setView(AppView.DASHBOARD)} className="flex items-center gap-3 cursor-pointer"><div className="bg-white p-1.5 rounded"><Icons.LayoutDashboard className="text-[#00539B]" /></div><h1 className="font-bold text-lg">Market Pulse</h1></div></div></header>
+                    <main className="flex-1 w-full max-w-5xl mx-auto p-4">
+                        {apiKeyMissing && <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6"><p className="text-yellow-700 text-sm"><strong>Demo Mode:</strong> No API Key. AI features disabled.</p></div>}
+                        {view === AppView.DASHBOARD ? <Dashboard entries={entries} onAddClick={() => setView(AppView.NEW_ENTRY)} onDelete={(id) => setEntries(p => p.filter(e => e.id !== id))} /> : <EntryForm availableTargets={targets} onCreateTarget={(t) => setTargets(p => [t, ...p])} onUpdateTarget={(t) => setTargets(p => p.map(x => x.id === t.id ? t : x))} onDeleteTarget={(id) => setTargets(p => p.filter(x => x.id !== id))} onSave={(e) => { setEntries(p => [e, ...p]); setView(AppView.DASHBOARD); }} onCancel={() => setView(AppView.DASHBOARD)} />}
                     </main>
-                    <footer className="bg-white border-t border-gray-200 py-6 mt-8">
-                        <div className="max-w-5xl mx-auto px-4 text-center text-sm text-gray-500"><p>&copy; {new Date().getFullYear()} ASUS Competitor Intelligence.</p></div>
-                    </footer>
+                    <footer className="bg-white border-t py-6 mt-8 text-center text-sm text-gray-500">&copy; {new Date().getFullYear()} ASUS</footer>
                 </div>
             );
         };
 
-        // --- 5. RENDER ---
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
